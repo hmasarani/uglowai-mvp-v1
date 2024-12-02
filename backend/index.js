@@ -95,20 +95,20 @@ const upload = multer({
 const convertHeicToJpeg = async (buffer) => {
   try {
     // Check if it's a HEIC file using file-type
-    const fileTypeResult = await fileType.fromBuffer(buffer);  // Use `fromBuffer()` and await the result
+    const fileTypeResult = fileType(buffer);  // No await needed for version 19.x.x
 
     if (fileTypeResult && fileTypeResult.ext === 'heic') {
       // Convert HEIC to JPEG using heic-convert
       const jpegBuffer = await convert({
-        buffer: buffer, // the HEIC file buffer
-        format: 'JPEG',  // convert to JPEG
-        quality: 0.7     // compression quality
+        buffer: buffer,  // the HEIC file buffer
+        format: 'JPEG',   // convert to JPEG
+        quality: 0.7      // compression quality
       });
 
       return jpegBuffer;
     }
 
-    // If not HEIC, return original buffer
+    // If not HEIC, return the original buffer
     return buffer;
   } catch (error) {
     console.error('HEIC conversion error:', error);
