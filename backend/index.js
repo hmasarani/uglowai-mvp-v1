@@ -126,7 +126,7 @@ const convertHeicToJpeg = async (buffer) => {
 };
 
 // Example route handler (adjust to fit your existing code)
-app.post("/analyze-images", upload.array("images", 3), async (req, res) => {
+app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
   try {
     if (!req.files || req.files.length !== 3) {
       return res.status(400).json({
@@ -150,7 +150,13 @@ app.post("/analyze-images", upload.array("images", 3), async (req, res) => {
       id: index + 1,
       url: file.Location,
     }));
-
+    app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
+      // Log incoming request details
+      console.log('Request body:', req.body);
+      console.log('Request files:', req.files);
+    
+      // Rest of your existing code...
+    });
     // Continue with your existing OpenAI analysis logic...
     const skinAnalysisPrompt = `
 You are a highly advanced skin analysis expert. Your task is to assess the quality of a subject's skin based on an input image. Evaluate the following attributes, providing a score out of 100 for each, where higher scores indicate better skin quality. Include a brief explanation of your assessment. Follow these detailed guidelines:

@@ -1,68 +1,116 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import "./TryFreeButton.css";  // Ensure your CSS is properly imported
 
-const TryFreeButton = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
+const TryFreePage = () => {
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadError, setUploadError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
 
-  // Toggle modal visibility
-  const handleButtonClick = () => {
-    setIsModalOpen(true);
-  };
-
-  // Handle form input change
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-  };
-
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Validate email
-    const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!email || !emailPattern.test(email)) {
-      setEmailError("Please enter a valid email address.");
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Validate number of files
+    if (files.length !== 3) {
+      setUploadError("Please select exactly 3 images");
       return;
     }
 
-    // If valid, redirect to the /try-free page
-    localStorage.setItem("userEmail", email);  // Optional: Save email for later use
-    setIsModalOpen(false);
-    navigate("/try-free");
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
+    const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      setUploadError("Only JPEG, PNG, and HEIC files are allowed");
+      return;
+    }
+
+    setSelectedFiles(files);
+    setUploadError("");
+  };
+
+  // Handle file upload
+  const handleUpload = async (e) => {
+    e.preventDefault();
+
+    // Validate file selection
+    if (selectedFiles.length !== 3) {
+      setUploadError("Please select exactly 3 images");
+      return;
+    }
+
+    // Create FormData
+    const formData = new FormData();
+    selectedFiles.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    try {
+      setIsUploading(true);
+      setUploadError("");
+
+      // Send files to backend
+      const response = await axios.post(
+        'https://your-backend-url.com/analyze-images', 
+        formData, 
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      // Handle successful upload
+      console.log('Upload successful', response.data);
+      // Navigate to results page or handle response as needed
+      // navigate('/results');
+
+    } catch (error) {
+      console.error('Upload failed', error);
+      setUploadError(error.response?.data?.message || "Upload failed. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
-    <div>
-      <button className="cta-button" onClick={handleButtonClick}>
-        Try Now for Free
-      </button>
+    <div className="try-free-page">
+      <h1>Upload Your Skin Images</h1>
+      <p>Please upload 3 clear, well-lit images of your face</p>
 
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h2>Enter your email</h2>
-            <form onSubmit={handleSubmit}>
-              <input
-                type="email"
-                placeholder="Your email"
-                value={email}
-                onChange={handleEmailChange}
-              />
-              {emailError && <p className="error-message">{emailError}</p>}
-              <button type="submit">Submit</button>
-            </form>
-            <button className="close-button" onClick={() => setIsModalOpen(false)}>
-              X
-            </button>
+      <form onSubmit={handleUpload}>
+        <input 
+          type="file" 
+          multiple 
+          accept="image/jpeg,image/png,image/heic,image/heif"
+          onChange={handleFileChange}
+          disabled={isUploading}
+        />
+
+        {selectedFiles.length > 0 && (
+          <div className="selected-files">
+            <h3>Selected Files:</h3>
+            {selectedFiles.map((file, index) => (
+              <p key={index}>{file.name}</p>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {uploadError && (
+          <p className="error-message">{uploadError}</p>
+        )}
+
+        <button 
+          type="submit" 
+          disabled={selectedFiles.length !== 3 || isUploading}
+        >
+          {isUploading ? 'Uploading...' : 'Analyze My Skin'}
+        </button>
+      </form>
     </div>
   );
 };
 
-export default TryFreeButton;
+export default TryFreePage;
