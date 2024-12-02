@@ -70,11 +70,22 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB file size limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ["image/jpeg", "image/png", "image/HEIC"];
-    if (allowedTypes.includes(file.mimetype)) {
+    const allowedTypes = [
+      "image/jpeg", 
+      "image/png", 
+      "image/heic", 
+      "image/heif", 
+      "image/x-citrus", // Additional HEIC/HEIF mime types
+      "image/webp"      // Modern mobile image format
+    ];
+
+    // Convert mimetype to lowercase for case-insensitive comparison
+    const normalizedMimeType = file.mimetype.toLowerCase();
+
+    if (allowedTypes.includes(normalizedMimeType)) {
       cb(null, true);
     } else {
-      cb(new Error("Invalid file type. Only JPEG, PNG, and GIF images are allowed."));
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: JPEG, PNG, HEIC, WEBP`));
     }
   },
 });
