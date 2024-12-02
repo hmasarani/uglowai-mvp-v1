@@ -236,43 +236,45 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 }
 ;`; 
 
-    const openaiResponse = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [
-        {
-          role: "user",
-          content: skinAnalysisPrompt,
-        },
-      ],
-      temperature: 0.4,
-      max_tokens: 4000,
-    });
+try {
+  const openaiResponse = await openai.chat.completions.create({
+    model: "gpt-4-turbo",
+    messages: [
+      {
+        role: "user",
+        content: skinAnalysisPrompt,
+      },
+    ],
+    temperature: 0.4,
+    max_tokens: 4000,
+  });
 
-    const responseContent = openaiResponse.choices[0].message.content;
-    let scores;
-    try {
-      scores = JSON.parse(responseContent);
-    } catch (parseError) {
-      return res.status(500).json({
-        message: "Failed to parse analysis results",
-        error: parseError.message,
-        rawResponse: responseContent,
-      });
-    }
+  const responseContent = openaiResponse.choices[0].message.content;
+  let scores;
 
-    res.status(200).json({
-      message: "Images analyzed successfully",
-      images: imageDescriptions,
-      scores: scores,
-    });
-  } catch (error) {
-    console.error("Error during image analysis:", error);
-    res.status(500).json({
-      message: "An unexpected error occurred while processing images",
-      error: process.env.NODE_ENV !== "production" ? error.message : "Internal Server Error",
+  try {
+    scores = JSON.parse(responseContent);
+  } catch (parseError) {
+    return res.status(500).json({
+      message: "Failed to parse analysis results",
+      error: parseError.message,
+      rawResponse: responseContent,
     });
   }
-});
+
+  res.status(200).json({
+    message: "Images analyzed successfully",
+    images: imageDescriptions,
+    scores: scores,
+  });
+} catch (error) {
+  console.error("Error during image analysis:", error);
+  res.status(500).json({
+    message: "An unexpected error occurred while processing images",
+    error: process.env.NODE_ENV !== "production" ? error.message : "Internal Server Error",
+  });
+}
+
 
 // Health check endpoint
 app.get("/health", (req, res) => {
