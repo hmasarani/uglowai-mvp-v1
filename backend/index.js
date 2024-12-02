@@ -67,12 +67,6 @@ app.get("/test-cors", (req, res) => {
 });
 
 // Multer configuration for file uploads
-import multer from 'multer';
-import sharp from 'sharp';
-import convert from 'heic-convert';
-import * as fileType from 'file-type';
-
-// Multer configuration with HEIC handling
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -131,11 +125,8 @@ const convertHeicToJpeg = async (buffer) => {
   }
 };
 
-// Export the upload middleware and conversion function
-export { upload, convertHeicToJpeg };
-
 // Example route handler (adjust to fit your existing code)
-export const handleImageAnalysis = async (req, res) => {
+app.post("/analyze-images", upload.array("images", 3), async (req, res) => {
   try {
     if (!req.files || req.files.length !== 3) {
       return res.status(400).json({
@@ -161,15 +152,6 @@ export const handleImageAnalysis = async (req, res) => {
     }));
 
     // Continue with your existing OpenAI analysis logic...
-  } catch (error) {
-    console.error('Image upload error:', error);
-    res.status(500).json({
-      message: "Image upload failed",
-      error: error.message
-    });
-  }
-};
-
     const skinAnalysisPrompt = `
 You are a highly advanced skin analysis expert. Your task is to assess the quality of a subject's skin based on an input image. Evaluate the following attributes, providing a score out of 100 for each, where higher scores indicate better skin quality. Include a brief explanation of your assessment. Follow these detailed guidelines:
 
@@ -226,7 +208,6 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 
 **IMPORTANT**: Output must be valid JSON and contain all five attributes with scores and explanations. Do not include any additional text or commentary.
 
-
 {
 "Redness": {"score": 0, "explanation": "Explanation of redness score."},
 "Hydration": {"score": 0, "explanation": "Explanation of hydration score."},
@@ -234,92 +215,51 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 "Acne": {"score": 0, "explanation": "Explanation of acne score."},
 "Overall Skin Quality": {"score": 0, "explanation": "Explanation of overall skin quality."}
 }
-;`; 
+`;
 
-try {
-  const openaiResponse = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [
-      {
-        role: "user",
-        content: skinAnalysisPrompt,
-      },
-    ],
-    temperature: 0.4,
-    max_tokens: 4000,
-  });
+    try {
+      const openaiResponse = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: [
+          {
+            role: "user",
+            content: skinAnalysisPrompt,
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 4000,
+      });
 
-  const responseContent = openaiResponse.choices[0].message.content;
-  let scores;
+      const responseContent = openaiResponse.choices[0].message.content;
+      let scores;
 
-  try {
-    scores = JSON.parse(responseContent);
-  } catch (parseError) {
-    return res.status(500).json({
-      message: "Failed to parse analysis results",
-      error: parseError.message,
-      rawResponse: responseContent,
+      try {
+        scores = JSON.parse(responseContent);
+      } catch (parseError) {
+        return res.status(500).json({
+          message: "Error parsing OpenAI response",
+          details: parseError.message,
+        });
+      }
+
+      res.json({ imageDescriptions, skinAnalysis: scores });
+    } catch (openaiError) {
+      console.error("OpenAI error:", openaiError);
+      res.status(500).json({
+        message: "Error with OpenAI API",
+        details: openaiError.message,
+      });
+    }
+  } catch (error) {
+    console.error("Error processing images:", error);
+    res.status(500).json({
+      message: "Error processing image files.",
+      details: error.message,
     });
   }
-
-  res.status(200).json({
-    message: "Images analyzed successfully",
-    images: imageDescriptions,
-    scores: scores,
-  });
-} catch (error) {
-  console.error("Error during image analysis:", error);
-  res.status(500).json({
-    message: "An unexpected error occurred while processing images",
-    error: process.env.NODE_ENV !== "production" ? error.message : "Internal Server Error",
-  });
-}
-
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-  });
 });
 
-// Environment debug route
-app.get("/debug-env", (req, res) => {
-  res.json({
-    openaiApiKey: process.env.OPENAI_API_KEY ? "Exists" : "Missing",
-  });
+// Start server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
 });
-
-// 404 handler for undefined routes
-app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found",
-    path: req.path,
-  });
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: "An unexpected error occurred",
-    error: process.env.NODE_ENV === "production" ? {} : err.message,
-  });
-});
-
-// Start the server
-const server = app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
-
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("SIGTERM signal received: closing HTTP server");
-  server.close(() => {
-    console.log("HTTP server closed");
-    process.exit(0);
-  });
-});
-
-export default app;
