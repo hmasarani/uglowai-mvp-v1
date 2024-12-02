@@ -35,9 +35,6 @@ requiredEnvVars.forEach(varName => {
 const app = express();
 const port = process.env.PORT || 5001;
 
-app.use("/", (req, res) => {
-  res.send("Server is running!");
-});
 
 // Initialize OpenAI with error handling
 let openai;
@@ -59,6 +56,10 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
+// cors health check
+app.get('/test-cors', (req, res) => {
+  res.json({ message: 'CORS is working!' });
+});
 
 // Multer configuration with enhanced file validation
 const upload = multer({
@@ -316,6 +317,11 @@ app.use((err, req, res, next) => {
    error: process.env.NODE_ENV === 'production' ? {} : err.message
  });
 });
+
+app.use("/", (req, res) => {
+  res.send("Server is running!");
+});
+
 
 // Start the server
 const server = app.listen(port, () => {
