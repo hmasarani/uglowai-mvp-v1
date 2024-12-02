@@ -11,6 +11,10 @@ import uploadFileToS3 from "./S3Uploader.js";
 dotenv.config();
 
 
+app.use("/", (req, res) => {
+    res.send("Server is running!");
+});
+
 // Validate critical environment variables
 const requiredEnvVars = [
  'OPENAI_API_KEY',
@@ -305,10 +309,6 @@ app.use((err, req, res, next) => {
    message: 'An unexpected error occurred',
    error: process.env.NODE_ENV === 'production' ? {} : err.message
  });
-});
-
-app.use("/", (req, res) => {
-    res.send("Server is running!");
 });
 
 // Start the server
