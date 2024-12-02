@@ -1,0 +1,215 @@
+/* General Styling */
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  color: #333;
+  background-color: #fbf7f4;
+  line-height: 1.6;
+}
+
+.landing-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(120deg, #fa8072, #fbf7f4);
+  color: #fff;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+/* Navbar Styling */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  padding: 0 5%;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+/* Content Styling */
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 100px 5% 50px; /* Increased top padding to 100px */
+  width: 90%;
+  max-width: 1200px;
+  gap: 40px;
+  margin-top: 30px; /* Added margin-top for additional spacing */
+}
+
+
+.text-section {
+  flex: 1;
+  max-width: 600px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h1.funnel-display-landing {
+  font-size: 3rem;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #333;
+}
+
+p.funnel-display-landing {
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+  color: #FFFFFF;
+}
+
+.cta-section {
+  display: flex;
+  flex-direction: column;  /* Stack input and button vertically */
+  align-items: center;     /* Center-align content */
+  gap: 5px;               /* Add consistent spacing */
+  margin-top: 15px;
+  width: 100%;             /* Ensure alignment with parent container */
+}
+
+.cta-input,
+.cta-button {
+  width: 100%;             /* Make both input and button take up full width */
+  max-width: 300px;        /* Set max-width for both input and button */
+  padding: 15px 20px;      /* Consistent padding for both */
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+}
+
+.cta-input:focus {
+  outline: none;
+  border-color: #fa8072;
+}
+
+.cta-button {
+  background: linear-gradient(45deg, #fa8072, #ff6f61);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cta-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.cta-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.consent-message {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 10px;
+}
+
+.error-message {
+  color: #ff6f61;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+.image-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mockup-image {
+  max-width: 120%;
+  height: auto;
+  
+  /* border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); */
+}
+
+/* Video Section */
+.video-section {
+  width: 100%;
+  text-align: center;
+  margin: 50px 0;
+  padding: 20px;
+  background-color: #ffffff;
+}
+
+.video-title {
+  font-size: 2rem;
+  color: #fa8072;
+  margin-bottom: 20px;
+}
+
+.demo-video {
+  width: 40%;
+  max-width: 800px;
+  border-radius: 10px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .content {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .text-section {
+    text-align: center;
+    max-width: 100%;
+    padding-top: 40px; /* Add top padding to push content down */
+  }
+
+  .image-section {
+    margin-top: 20px;
+  }
+
+  h1.funnel-display-landing {
+    font-size: 2.2rem;
+  }
+
+  p.funnel-display-landing {
+    font-size: 1rem;
+  }
+
+  .cta-section {
+    display: flex;
+    flex-direction: column; /* Stack input and button vertically */
+    align-items: center;    /* Center-align content */
+    gap: 10px;              /* Add consistent spacing */
+    margin-top: 15px;
+    width: 100%;            /* Ensure alignment with parent container */
+  }
+  
+  .cta-input, .cta-button {
+    width: 100%;            /* Make them stretch to fit parent */
+    max-width: 300px; 
+    align-items: center;   
+    padding-left: 10px; /* Center-align content */
+    /* Maintain consistent width */
+  }
+  
+
+  .demo-video {
+    width: 100%;
+  }
+}

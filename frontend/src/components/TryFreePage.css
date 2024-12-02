@@ -1,0 +1,159 @@
+/* General Styling */
+.try-free-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  background: linear-gradient(120deg, #fa8072, #fbf7f4);
+  padding: 20px;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+  position: relative;
+}
+
+/* Add a subtle background pattern */
+.try-free-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23ffffff' opacity='0.1' viewBox='0 0 100 100'%3E%3Cpath d='M10 0H0v10h10V0zm10 90h10v10H20v-10zM90 80h10v10H90V80z'/%3E%3C/svg%3E") repeat;
+  z-index: -1;
+}
+
+h1 {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.upload-section {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.upload-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.image-preview {
+  position: relative;
+}
+
+.image-preview img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.remove-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: #ff6f61;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.remove-button:hover {
+  background-color: #fa8072;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  background: #fa8072;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #ff6f61;
+}
+
+.placeholder {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: #999;
+}
+
+/* Error message */
+.error-message {
+  color: #ff6f61;
+  margin-top: 10px;
+}
+
+/* Submit Button */
+.submit-button {
+  background: linear-gradient(45deg, #fa8072, #ff6f61);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 15px 30px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 30px;
+  align-self: center; /* Ensure it aligns with center on all devices */
+}
+
+.submit-button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .upload-section {
+    flex-direction: column;
+    align-items: center; /* Center-align items */
+  }
+
+  .upload-item {
+    width: 90%;
+  }
+
+  .submit-button {
+    width: 90%; /* Make it span the width of its container */
+    max-width: 300px; /* Keep it reasonable */
+  }
+}
