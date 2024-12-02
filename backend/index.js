@@ -5,6 +5,9 @@ import multer from "multer";
 import dotenv from "dotenv";
 import OpenAI from "openai";
 import uploadFileToS3 from "./S3Uploader.js";
+import sharp from 'sharp';
+import convert from 'heic-convert';
+import * as fileType from 'file-type';
 
 // Load environment variables
 try {
@@ -64,6 +67,12 @@ app.get("/test-cors", (req, res) => {
 });
 
 // Multer configuration for file uploads
+import multer from 'multer';
+import sharp from 'sharp';
+import convert from 'heic-convert';
+import * as fileType from 'file-type';
+
+// Multer configuration with HEIC handling
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -75,29 +84,26 @@ const upload = multer({
       "image/png", 
       "image/heic", 
       "image/heif", 
-      "image/x-citrus", // Additional HEIC/HEIF mime types
-      "image/webp"      // Modern mobile image format
+      "image/x-citrus"
     ];
 
-    // Convert mimetype to lowercase for case-insensitive comparison
     const normalizedMimeType = file.mimetype.toLowerCase();
 
     if (allowedTypes.includes(normalizedMimeType)) {
       cb(null, true);
     } else {
-      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: JPEG, PNG, HEIC, WEBP`));
+      cb(new Error(`Invalid file type: ${file.mimetype}. Allowed types: JPEG, PNG, HEIC`));
     }
   },
 });
+
 // Async function to convert HEIC to JPEG
 const convertHeicToJpeg = async (buffer) => {
   try {
-    // First, check if it's actually a HEIC file
-    const isHeic = await import('file-type').then(ft => 
-      ft.fileTypeFromBuffer(buffer)
-    );
+    // Check if it's a HEIC file using file-type
+    const fileTypeResult = await fileType.fileTypeFromBuffer(buffer);
 
-    if (isHeic && isHeic.ext === 'heic') {
+    if (fileTypeResult && fileTypeResult.ext === 'heic') {
       // Convert HEIC to JPEG using heic-convert
       const jpegBuffer = await convert({
         buffer: buffer, // the HEIC file buffer
@@ -125,8 +131,11 @@ const convertHeicToJpeg = async (buffer) => {
   }
 };
 
-// Image analysis endpoint
-app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
+// Export the upload middleware and conversion function
+export { upload, convertHeicToJpeg };
+
+// Example route handler (adjust to fit your existing code)
+export const handleImageAnalysis = async (req, res) => {
   try {
     if (!req.files || req.files.length !== 3) {
       return res.status(400).json({
@@ -139,12 +148,19 @@ app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
       req.files.map(async (file, index) => {
         // Convert HEIC to JPEG if necessary
         const convertedBuffer = await convertHeicToJpeg(file.buffer);
+        
         const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
         return uploadFileToS3(convertedBuffer, fileName);
       })
     );
 
     // Rest of your existing code remains the same...
+    const imageDescriptions = uploadedFiles.map((file, index) => ({
+      id: index + 1,
+      url: file.Location,
+    }));
+
+    // Continue with your existing OpenAI analysis logic...
   } catch (error) {
     console.error('Image upload error:', error);
     res.status(500).json({
@@ -152,7 +168,7 @@ app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
       error: error.message
     });
   }
-});
+};
 
     const skinAnalysisPrompt = `
 You are a highly advanced skin analysis expert. Your task is to assess the quality of a subject's skin based on an input image. Evaluate the following attributes, providing a score out of 100 for each, where higher scores indicate better skin quality. Include a brief explanation of your assessment. Follow these detailed guidelines:
