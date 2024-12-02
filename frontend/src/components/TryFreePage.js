@@ -13,6 +13,10 @@ const TryFreePage = () => {
     const file = event.target.files[0];
 
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("Only image files are allowed.");
+        return;
+      }
       newImages[index] = file;
       setImages(newImages);
       setError(""); // Clear error on valid file selection
@@ -27,22 +31,24 @@ const TryFreePage = () => {
       console.error(`Input element with id file-input-${index} not found.`);
     }
   };
-  
 
   const handleRemoveImage = (index) => {
     const newImages = [...images];
     newImages[index] = null;
     setImages(newImages);
+    setError(""); // Clear error when image is removed
   };
 
   const handleSubmit = async () => {
-    if (images.filter((img) => img !== null).length !== 3) {
-      setError("Please upload exactly 3 pictures.");
+    const filledImages = images.filter((img) => img !== null);
+
+    if (filledImages.length !== 3) {
+      setError(`Please upload exactly 3 pictures. You have ${filledImages.length} image(s) uploaded.`);
       return;
     }
 
     const formData = new FormData();
-    images.forEach((image, index) => {
+    filledImages.forEach((image, index) => {
       formData.append("files", image, `image${index + 1}.jpg`);
     });
 
@@ -86,20 +92,30 @@ const TryFreePage = () => {
             {image ? (
               <div className="image-preview">
                 <img src={URL.createObjectURL(image)} alt={`Uploaded ${index + 1}`} />
-                <button className="remove-button" onClick={() => handleRemoveImage(index)}>
+                <button 
+                  className="remove-button" 
+                  onClick={() => handleRemoveImage(index)} 
+                  aria-label={`Remove image ${index + 1}`}
+                >
                   Remove
                 </button>
               </div>
             ) : (
               <div className="upload-controls">
                 <input
-                    id={`file-input-${index}`}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => handleImageChange(index, e)}
-                  />
-                <button onClick={() => handleTakePhoto(index)}>Choose Image</button>
+                  id={`file-input-${index}`}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => handleImageChange(index, e)}
+                  aria-label={`Choose image ${index + 1}`}
+                />
+                <button 
+                  onClick={() => handleTakePhoto(index)} 
+                  aria-label={`Capture image ${index + 1}`}
+                >
+                  Choose Image
+                </button>
                 <p className="placeholder">No file selected</p>
               </div>
             )}
@@ -111,6 +127,7 @@ const TryFreePage = () => {
         onClick={handleSubmit} 
         disabled={isSubmitting} 
         className={isSubmitting ? "submit-button disabled" : "submit-button"}
+        aria-label="Submit images for analysis"
       >
         {isSubmitting ? "Submitting..." : "Submit"}
       </button>
