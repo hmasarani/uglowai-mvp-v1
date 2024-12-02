@@ -50,7 +50,7 @@ const TryFreePage = () => {
     setError(""); // Clear any previous error
 
     try {
-      const response = await fetch("http://localhost:5001/analyze-images", {
+      const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
       });
