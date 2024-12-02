@@ -7,7 +7,7 @@ import OpenAI from "openai";
 import uploadFileToS3 from "./S3Uploader.js";
 import sharp from 'sharp';
 import convert from 'heic-convert';
-import * as fileType from 'file-type';
+import * as fileType from 'file-type'; // Remove this line inside the function
 
 // Load environment variables
 try {
@@ -90,9 +90,6 @@ const upload = multer({
     }
   },
 });
-
-// Async function to convert HEIC to JPEG
-import * as fileType from 'file-type';  // Make sure this is the correct import
 
 // Async function to convert HEIC to JPEG
 const convertHeicToJpeg = async (buffer) => {
