@@ -53,7 +53,7 @@ const TryFreePage = () => {
 
       // Send files to backend
       const response = await axios.post(
-        'https://your-backend-url.com/analyze-images', 
+        'https://uglowai-mvp-v1.vercel.app/analyze-images', 
         formData, 
         {
           headers: {

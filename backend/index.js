@@ -51,7 +51,7 @@ app.use(
   cors({
     origin: ["https://uglowai-mvp-v1-frontend.vercel.app"],
     methods: ["POST", "GET"],
-    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
 app.use(bodyParser.json());
