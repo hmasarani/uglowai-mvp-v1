@@ -89,6 +89,41 @@ const upload = multer({
     }
   },
 });
+// Async function to convert HEIC to JPEG
+const convertHeicToJpeg = async (buffer) => {
+  try {
+    // First, check if it's actually a HEIC file
+    const isHeic = await import('file-type').then(ft => 
+      ft.fileTypeFromBuffer(buffer)
+    );
+
+    if (isHeic && isHeic.ext === 'heic') {
+      // Convert HEIC to JPEG using heic-convert
+      const jpegBuffer = await convert({
+        buffer: buffer, // the HEIC file buffer
+        format: 'JPEG',  // convert to JPEG
+        quality: 0.7     // compression quality
+      });
+
+      return jpegBuffer;
+    }
+
+    // If not HEIC, return original buffer
+    return buffer;
+  } catch (error) {
+    console.error('HEIC conversion error:', error);
+    
+    // Fallback to sharp for conversion if heic-convert fails
+    try {
+      return await sharp(buffer)
+        .toFormat('jpeg')
+        .toBuffer();
+    } catch (sharpError) {
+      console.error('Sharp conversion error:', sharpError);
+      throw new Error('Failed to convert image');
+    }
+  }
+};
 
 // Image analysis endpoint
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
@@ -99,17 +134,25 @@ app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
       });
     }
 
+    // Convert files, ensuring they are JPEG
     const uploadedFiles = await Promise.all(
       req.files.map(async (file, index) => {
+        // Convert HEIC to JPEG if necessary
+        const convertedBuffer = await convertHeicToJpeg(file.buffer);
         const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
-        return uploadFileToS3(file.buffer, fileName);
+        return uploadFileToS3(convertedBuffer, fileName);
       })
     );
 
-    const imageDescriptions = uploadedFiles.map((file, index) => ({
-      id: index + 1,
-      url: file.Location,
-    }));
+    // Rest of your existing code remains the same...
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json({
+      message: "Image upload failed",
+      error: error.message
+    });
+  }
+});
 
     const skinAnalysisPrompt = `
 You are a highly advanced skin analysis expert. Your task is to assess the quality of a subject's skin based on an input image. Evaluate the following attributes, providing a score out of 100 for each, where higher scores indicate better skin quality. Include a brief explanation of your assessment. Follow these detailed guidelines:
