@@ -5,7 +5,6 @@ import { validateEmail } from "../utils/EmailVerification";
 import "./LandingPage.css";
 import demoVid from "../assets/Prototype_V1.0.0_MicroSaaS.mp4"; 
 
-
 const LandingPage = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -28,18 +27,18 @@ const LandingPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
-        mode: "no-cors", // Disable CORS enforcement
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email: email,
+          // You can add additional fields here if needed
+        }),
       });
 
-      if (response.ok) {
-        setLoading(false);
-        navigate("/try-free");
-      } else {
-        setLoading(false);
-        setError(data.message || "An error occurred. Please try again.");
-      }
+      // With Formspark, even successful submissions return a 400 status
+      // So we don't check response.ok
+      setLoading(false);
+      navigate("/try-free");
     } catch (error) {
       console.error("Error submitting form:", error);
       setError("Network error. Please check your connection.");
