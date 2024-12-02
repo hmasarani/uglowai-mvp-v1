@@ -10,11 +10,7 @@ import convert from 'heic-convert';
 import fileType from 'file-type';
 
 // Load environment variables
-try {
-  dotenv.config();
-} catch (error) {
-  console.error("Error loading .env file:", error);
-}
+dotenv.config();
 
 // Validate critical environment variables
 const requiredEnvVars = [
@@ -92,29 +88,23 @@ const upload = multer({
 });
 
 // Async function to convert HEIC to JPEG
-// Async function to convert HEIC to JPEG
 const convertHeicToJpeg = async (buffer) => {
   try {
-    // Check if it's a HEIC file using file-type
-    const fileTypeResult = await fileType.fromBuffer(buffer);  // Add await
+    const fileTypeResult = await fileType.fromBuffer(buffer);
 
     if (fileTypeResult && fileTypeResult.ext === 'heic') {
-      // Convert HEIC to JPEG using heic-convert
       const jpegBuffer = await convert({
-        buffer: buffer,  // the HEIC file buffer
-        format: 'JPEG',   // convert to JPEG
-        quality: 0.7      // compression quality
+        buffer: buffer,
+        format: 'JPEG',
+        quality: 0.7,
       });
 
       return jpegBuffer;
     }
 
-    // If not HEIC, return the original buffer
     return buffer;
   } catch (error) {
     console.error('HEIC conversion error:', error);
-
-    // Fallback to sharp for conversion if heic-convert fails
     try {
       return await sharp(buffer)
         .toFormat('jpeg')
@@ -126,11 +116,8 @@ const convertHeicToJpeg = async (buffer) => {
   }
 };
 
-
-
-
-// Example route handler (adjust to fit your existing code)
-pp.post("/analyze-images", upload.array("files", 3), async (req, res) => {
+// Route handler for analyzing images
+app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
   try {
     // Log uploaded files
     console.log('Uploaded Files:', req.files.map(file => ({
@@ -151,11 +138,8 @@ pp.post("/analyze-images", upload.array("files", 3), async (req, res) => {
     const uploadedFiles = await Promise.all(
       req.files.map(async (file, index) => {
         const fileBuffer = file.buffer;
-        const fileName = `images/face-${Date.now()}-${index + 1}.jpg`; // Corrected template literal
-        console.log(`Uploading file ${index + 1}:`, { // Corrected template literal
-          fileName,
-          bufferLength: fileBuffer.length
-        });
+        const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
+        console.log(`Uploading file ${index + 1}:`, { fileName, bufferLength: fileBuffer.length });
         return uploadFileToS3(fileBuffer, fileName);
       })
     );
@@ -166,15 +150,7 @@ pp.post("/analyze-images", upload.array("files", 3), async (req, res) => {
       url: file.Location,
     }));
 
-    // Respond with the uploaded image URLs
-    res.status(200).json({ images: imageDescriptions });
-  } catch (error) {
-    console.error("Error in analyzing images:", error);
-    res.status(500).json({ message: "Error processing images" });
-  }
-});
-
-    // Continue with your existing OpenAI analysis logic...
+    // Define the OpenAI prompt for skin analysis
     const skinAnalysisPrompt = `
 You are a highly advanced skin analysis expert. Your task is to assess the quality of a subject's skin based on an input image. Evaluate the following attributes, providing a score out of 100 for each, where higher scores indicate better skin quality. Include a brief explanation of your assessment. Follow these detailed guidelines:
 
@@ -237,17 +213,13 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 "Acne": {"score": 0, "explanation": "Explanation of acne score."},
 "Overall Skin Quality": {"score": 0, "explanation": "Explanation of overall skin quality."}
 }
-`;
+`; // Your skin analysis prompt here
 
+    // Process the OpenAI analysis
     try {
       const openaiResponse = await openai.chat.completions.create({
         model: "gpt-4-turbo",
-        messages: [
-          {
-            role: "user",
-            content: skinAnalysisPrompt,
-          },
-        ],
+        messages: [{ role: "user", content: skinAnalysisPrompt }],
         temperature: 0.4,
         max_tokens: 4000,
       });
@@ -264,17 +236,18 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
         });
       }
 
-      res.json({ imageDescriptions, skinAnalysis: scores });
+      return res.json({ imageDescriptions, skinAnalysis: scores });
     } catch (openaiError) {
       console.error("OpenAI error:", openaiError);
-      res.status(500).json({
+      return res.status(500).json({
         message: "Error with OpenAI API",
         details: openaiError.message,
       });
     }
+
   } catch (error) {
     console.error("Error processing images:", error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error processing image files.",
       details: error.message,
     });
