@@ -307,6 +307,9 @@ app.use((err, req, res, next) => {
  });
 });
 
+app.use("/", (req, res) => {
+    res.send("Server is running!");
+});
 
 // Start the server
 const server = app.listen(port, () => {
