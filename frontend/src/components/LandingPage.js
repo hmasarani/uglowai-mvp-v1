@@ -29,6 +29,7 @@ const LandingPage = () => {
         headers: {
           "Content-Type": "application/json",
         },
+        mode: "no-cors", // Disable CORS enforcement
         body: JSON.stringify({ email }),
       });
 
