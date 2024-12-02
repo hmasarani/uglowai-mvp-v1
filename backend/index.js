@@ -7,7 +7,7 @@ import OpenAI from "openai";
 import uploadFileToS3 from "./S3Uploader.js";
 import sharp from 'sharp';
 import convert from 'heic-convert';
-import * as fileType from 'file-type'; // Remove this line inside the function
+import fileType from 'file-type';
 
 // Load environment variables
 try {
@@ -92,10 +92,11 @@ const upload = multer({
 });
 
 // Async function to convert HEIC to JPEG
+// Async function to convert HEIC to JPEG
 const convertHeicToJpeg = async (buffer) => {
   try {
     // Check if it's a HEIC file using file-type
-    const fileTypeResult = fileType(buffer);  // No await needed for version 19.x.x
+    const fileTypeResult = await fileType.fromBuffer(buffer);  // Add await
 
     if (fileTypeResult && fileTypeResult.ext === 'heic') {
       // Convert HEIC to JPEG using heic-convert
@@ -127,38 +128,52 @@ const convertHeicToJpeg = async (buffer) => {
 
 
 
+
 // Example route handler (adjust to fit your existing code)
-app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
+pp.post("/analyze-images", upload.array("files", 3), async (req, res) => {
   try {
+    // Log uploaded files
+    console.log('Uploaded Files:', req.files.map(file => ({
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      bufferLength: file.buffer.length
+    })));
+
+    // Validate 3 images are uploaded
     if (!req.files || req.files.length !== 3) {
       return res.status(400).json({
         message: "Missing picture(s). Please upload 3 pictures to proceed.",
       });
     }
 
-    // Convert files, ensuring they are JPEG
+    // Upload images to S3
     const uploadedFiles = await Promise.all(
       req.files.map(async (file, index) => {
-        // Convert HEIC to JPEG if necessary
-        const convertedBuffer = await convertHeicToJpeg(file.buffer);
-        
-        const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
-        return uploadFileToS3(convertedBuffer, fileName);
+        const fileBuffer = file.buffer;
+        const fileName = `images/face-${Date.now()}-${index + 1}.jpg`; // Corrected template literal
+        console.log(`Uploading file ${index + 1}:`, { // Corrected template literal
+          fileName,
+          bufferLength: fileBuffer.length
+        });
+        return uploadFileToS3(fileBuffer, fileName);
       })
     );
 
-    // Rest of your existing code remains the same...
+    // Prepare image metadata for analysis
     const imageDescriptions = uploadedFiles.map((file, index) => ({
       id: index + 1,
       url: file.Location,
     }));
-    app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
-      // Log incoming request details
-      console.log('Request body:', req.body);
-      console.log('Request files:', req.files);
-    
-      // Rest of your existing code...
-    });
+
+    // Respond with the uploaded image URLs
+    res.status(200).json({ images: imageDescriptions });
+  } catch (error) {
+    console.error("Error in analyzing images:", error);
+    res.status(500).json({ message: "Error processing images" });
+  }
+});
+
     // Continue with your existing OpenAI analysis logic...
     const skinAnalysisPrompt = `
 You are a highly advanced skin analysis expert. Your task is to assess the quality of a subject's skin based on an input image. Evaluate the following attributes, providing a score out of 100 for each, where higher scores indicate better skin quality. Include a brief explanation of your assessment. Follow these detailed guidelines:
