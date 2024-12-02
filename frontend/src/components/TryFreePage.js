@@ -17,6 +17,10 @@ const TryFreePage = () => {
         setError("Only image files are allowed.");
         return;
       }
+      if (file.size > 5 * 1024 * 1024) {  // Limiting file size to 5MB
+        setError("File size should be less than 5MB.");
+        return;
+      }
       newImages[index] = file;
       setImages(newImages);
       setError(""); // Clear error on valid file selection
@@ -122,7 +126,7 @@ const TryFreePage = () => {
           </div>
         ))}
       </div>
-      {error && <p className="error-message">{error}</p>}
+      {error && <p className="error-message" aria-live="assertive">{error}</p>}
       <button 
         onClick={handleSubmit} 
         disabled={isSubmitting} 
