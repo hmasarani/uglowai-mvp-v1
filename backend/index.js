@@ -14,12 +14,6 @@ try {
   console.error("Error loading .env file:", error);
 }
 
-
-
-app.use("/", (req, res) => {
-    res.send("Server is running!");
-});
-
 // Validate critical environment variables
 const requiredEnvVars = [
  'OPENAI_API_KEY',
@@ -41,6 +35,9 @@ requiredEnvVars.forEach(varName => {
 const app = express();
 const port = process.env.PORT || 5001;
 
+app.use("/", (req, res) => {
+  res.send("Server is running!");
+});
 
 // Initialize OpenAI with error handling
 let openai;
