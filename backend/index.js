@@ -53,7 +53,7 @@ try {
 
 // Middleware
 app.use(cors({
-  origin: ["https://uglowai-mvp-v1.vercel.app"],
+  origin: ["https://uglowai-mvp-v1-frontend.vercel.app"],
   methods: ["POST", "GET"],
   credentials: true
 }));
