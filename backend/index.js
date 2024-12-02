@@ -50,7 +50,11 @@ try {
 
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [""],
+  methods: ["POST", "GET"],
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 
@@ -317,7 +321,7 @@ const server = app.listen(port, () => {
 });
 
 
-// Graceful shutdown
+// Graceful shutdown      
 process.on('SIGTERM', () => {
  console.log('SIGTERM signal received: closing HTTP server');
  server.close(() => {
