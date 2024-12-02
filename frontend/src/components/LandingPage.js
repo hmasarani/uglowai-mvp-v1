@@ -24,7 +24,7 @@ const LandingPage = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("https://uglowai-mvp-v1.vercel.app/api/submit", {
+      const response = await fetch("https://submit-form.com/GPAS2zYr1", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
