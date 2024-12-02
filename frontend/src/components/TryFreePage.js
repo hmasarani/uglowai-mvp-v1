@@ -51,48 +51,54 @@ const TryFreePage = () => {
 
   const handleSubmit = async () => {
     const filledImages = images.filter((img) => img !== null);
-
+  
     console.log(`Images ready for submission: ${filledImages.length} image(s)`);
-
+  
     if (filledImages.length !== 3) {
       setError(`Please upload exactly 3 pictures. You have ${filledImages.length} image(s) uploaded.`);
       console.log(`Error: Not exactly 3 images uploaded. Current: ${filledImages.length}`);
       return;
     }
-
+  
     const formData = new FormData();
     filledImages.forEach((image, index) => {
       formData.append("files", image, `image${index + 1}.jpg`);
       console.log(`Image ${index + 1} added to FormData.`);
     });
-
+  
     setIsSubmitting(true); // Indicate submission is in progress
     setError(""); // Clear any previous error
-
+  
     try {
       console.log("Submitting images to the server...");
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
       });
-
+  
       console.log(`Response status: ${response.status}`);
-
+  
       if (!response.ok) {
         const errorData = await response.text();
         throw new Error(`Server Error: ${response.statusText}\n${errorData}`);
       }
-
+  
       const result = await response.json();
       console.log("Server Response:", result);
-
-      if (result && result.scores) {
-        localStorage.setItem("analysisResults", JSON.stringify(result.scores));
+  
+      // Check if the response has the expected structure (skinAnalysis)
+      if (result && result.skinAnalysis) {
+        console.log("Skin analysis results:", result.skinAnalysis);
+  
+        // Store the results in localStorage
+        localStorage.setItem("analysisResults", JSON.stringify(result.skinAnalysis));
+  
+        // Navigate to the results page
         navigate("/your-results");
         console.log("Navigation to results page.");
       } else {
         setError("Server returned no results. Please try again.");
-        console.log("Error: Server returned no results.");
+        console.log("Error: Server returned no results, or the response structure is incorrect.");
       }
     } catch (error) {
       console.error("Error analyzing images:", error);
@@ -101,8 +107,8 @@ const TryFreePage = () => {
       setIsSubmitting(false); // Reset submission state
       console.log("Image submission finished.");
     }
-  };
-
+  };  
+  
   return (
     <div className="try-free-page">
       <h1>Upload Your Images</h1>
