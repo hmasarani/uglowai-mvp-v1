@@ -226,7 +226,7 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
     temperature: 0.4,
     max_tokens: 4000,
   });
-
+  console.log("OpenAI API Response:", openaiResponse);
   const responseContent = openaiResponse.choices[0].message.content;
 
   // Parse and validate the JSON response from OpenAI
