@@ -92,10 +92,13 @@ const upload = multer({
 });
 
 // Async function to convert HEIC to JPEG
+import * as fileType from 'file-type';  // Make sure this is the correct import
+
+// Async function to convert HEIC to JPEG
 const convertHeicToJpeg = async (buffer) => {
   try {
     // Check if it's a HEIC file using file-type
-    const fileTypeResult = await fileType.fileTypeFromBuffer(buffer);
+    const fileTypeResult = fileType(buffer);  // Use `fileType()` here, not `fileTypeFromBuffer()`
 
     if (fileTypeResult && fileTypeResult.ext === 'heic') {
       // Convert HEIC to JPEG using heic-convert
@@ -112,7 +115,7 @@ const convertHeicToJpeg = async (buffer) => {
     return buffer;
   } catch (error) {
     console.error('HEIC conversion error:', error);
-    
+
     // Fallback to sharp for conversion if heic-convert fails
     try {
       return await sharp(buffer)
@@ -124,6 +127,7 @@ const convertHeicToJpeg = async (buffer) => {
     }
   }
 };
+
 
 // Example route handler (adjust to fit your existing code)
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
@@ -181,7 +185,7 @@ Scoring Guide:
 21-40: Moderately dry; noticeable dryness and flakiness.
 0-20: Severely dry; skin appears cracked or visibly dehydrated.
 Example Explanation: "Skin shows slight dryness on the forehead and cheeks, indicating a hydration score of 60."
-
+convertHeicToJpeg
 Pores:
 Evaluate the visibility and size of pores, where smaller and less visible pores correspond to a higher score.
 Scoring Guide:
