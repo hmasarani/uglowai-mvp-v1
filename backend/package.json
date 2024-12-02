@@ -15,7 +15,9 @@
     "heic-convert": "^2.1.0",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.73.1",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "file-type": "^16.0.0" 
+
   },
   "license": "ISC",
   "description": "Backend for UGlowAI MVP",
