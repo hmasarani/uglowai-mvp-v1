@@ -8,7 +8,12 @@ import uploadFileToS3 from "./S3Uploader.js";
 
 
 // Load environment variables
-dotenv.config();
+try {
+  dotenv.config();
+} catch (error) {
+  console.error("Error loading .env file:", error);
+}
+
 
 
 app.use("/", (req, res) => {
