@@ -219,57 +219,58 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 }
 `; // Your skin analysis prompt here
 
-// Process the OpenAI API call
-try {
-  console.log("Skin Analysis Prompt Sent to OpenAI:", skinAnalysisPrompt);
 
-  const openaiResponse = await openai.chat.completions.create({
-    model: "gpt-4-turbo",
-    messages: [{ role: "user", content: skinAnalysisPrompt }],
-    temperature: 0.4,
-    max_tokens: 4000,
-  });
+    // Process the OpenAI API call
+    console.log("Skin Analysis Prompt Sent to OpenAI:", skinAnalysisPrompt);
 
-  // Log the full OpenAI API response
-  console.log("OpenAI API Full Response:", openaiResponse);
+    const openaiResponse = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [{ role: "user", content: skinAnalysisPrompt }],
+      temperature: 0.4,
+      max_tokens: 4000,
+    });
 
-  const responseContent = openaiResponse.choices[0]?.message?.content;
-  console.log("Extracted Response Content:", responseContent);
+    // Log the full OpenAI API response
+    console.log("OpenAI API Full Response:", openaiResponse);
 
-  // Parse and validate the JSON response from OpenAI
-  let scores;
-  try {
-    scores = JSON.parse(responseContent);
-    console.log("Parsed JSON Scores from OpenAI:", scores);
-  } catch (parseError) {
-    console.error("Error Parsing OpenAI Response Content as JSON:", responseContent);
+    const responseContent = openaiResponse.choices[0]?.message?.content;
+    console.log("Extracted Response Content:", responseContent);
+
+    // Parse and validate the JSON response from OpenAI
+    let scores;
+    try {
+      scores = JSON.parse(responseContent);
+      console.log("Parsed JSON Scores from OpenAI:", scores);
+    } catch (parseError) {
+      console.error("Error Parsing OpenAI Response Content as JSON:", responseContent);
+      return res.status(500).json({
+        message: "Error parsing OpenAI response",
+        details: parseError.message,
+        rawResponse: responseContent,
+      });
+    }
+
+    // Log the final response before sending it back to the client
+    console.log("Final Response Sent to Client:", {
+      imageDescriptions,
+      skinAnalysis: scores,
+    });
+
+    // Send back the image URLs and analysis scores
+    return res.json({ imageDescriptions, skinAnalysis: scores });
+
+  } catch (error) {
+    // Log the error details
+    console.error("Error processing images or calling OpenAI:", error);
+
     return res.status(500).json({
-      message: "Error parsing OpenAI response",
-      details: parseError.message,
-      rawResponse: responseContent,
+      message: "Error processing image files.",
+      details: error.message,
     });
   }
+});
 
-  // Log the final response before sending it back to the client
-  console.log("Final Response Sent to Client:", {
-    imageDescriptions,
-    skinAnalysis: scores,
-  });
-
-  // Send back the image URLs and analysis scores
-  return res.json({ imageDescriptions, skinAnalysis: scores });
-
-} catch (error) {
-  // Log the error details
-  console.error("Error processing images or calling OpenAI:", error);
-
-  return res.status(500).json({
-    message: "Error processing image files.",
-    details: error.message,
-  });
-}
-
-// Start server
+// Start server (moved outside the try-catch)
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
