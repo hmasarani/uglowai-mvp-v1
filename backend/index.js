@@ -7,7 +7,7 @@ import OpenAI from "openai";
 import uploadFileToS3 from "./S3Uploader.js";
 import sharp from 'sharp';
 import convert from 'heic-convert';
-import fileType from 'file-type';
+import { fileTypeFromBuffer } from 'file-type';
 
 // Load environment variables
 dotenv.config();
@@ -87,64 +87,68 @@ const upload = multer({
   },
 });
 
-// Async function to convert HEIC to JPEG
 const convertHeicToJpeg = async (buffer) => {
   try {
-    const fileTypeResult = await fileType.fromBuffer(buffer);
+    const fileTypeResult = await fileTypeFromBuffer(buffer);
 
-    if (fileTypeResult && fileTypeResult.ext === 'heic') {
+    if (fileTypeResult && fileTypeResult.ext === "heic") {
       const jpegBuffer = await convert({
-        buffer: buffer,
-        format: 'JPEG',
-        quality: 0.7,
+        buffer,         // the HEIC file buffer
+        format: "JPEG", // convert to JPEG
+        quality: 0.7,   // adjust quality as needed
       });
 
       return jpegBuffer;
     }
 
+    // Return the original buffer if it's not a HEIC file
     return buffer;
   } catch (error) {
-    console.error('HEIC conversion error:', error);
+    console.error("HEIC conversion error:", error);
+
+    // Attempt fallback conversion using sharp
     try {
       return await sharp(buffer)
-        .toFormat('jpeg')
+        .toFormat("jpeg")
         .toBuffer();
     } catch (sharpError) {
-      console.error('Sharp conversion error:', sharpError);
-      throw new Error('Failed to convert image');
+      console.error("Sharp conversion error:", sharpError);
+      throw new Error("Failed to convert image");
     }
   }
 };
 
+
 // Route handler for analyzing images
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
   try {
-    // Log uploaded files
-    console.log('Uploaded Files:', req.files.map(file => ({
+    console.log("Uploaded Files:", req.files.map(file => ({
       originalname: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
-      bufferLength: file.buffer.length
     })));
 
-    // Validate 3 images are uploaded
+    // Validate that exactly 3 images were uploaded
     if (!req.files || req.files.length !== 3) {
       return res.status(400).json({
-        message: "Missing picture(s). Please upload 3 pictures to proceed.",
+        message: "Please upload exactly 3 pictures to proceed.",
       });
     }
 
-    // Upload images to S3
+    // Convert all files to JPEG (if needed) and upload them to S3
     const uploadedFiles = await Promise.all(
       req.files.map(async (file, index) => {
-        const fileBuffer = file.buffer;
+        const convertedBuffer = await convertHeicToJpeg(file.buffer);
         const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
-        console.log(`Uploading file ${index + 1}:`, { fileName, bufferLength: fileBuffer.length });
-        return uploadFileToS3(fileBuffer, fileName);
+
+        console.log(`Uploading file ${index + 1} as JPEG:`, fileName);
+
+        // Upload converted image to S3
+        return uploadFileToS3(convertedBuffer, fileName);
       })
     );
 
-    // Prepare image metadata for analysis
+    // Prepare metadata for OpenAI processing
     const imageDescriptions = uploadedFiles.map((file, index) => ({
       id: index + 1,
       url: file.Location,
@@ -215,45 +219,37 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 }
 `; // Your skin analysis prompt here
 
-    // Process the OpenAI analysis
-    try {
-      const openaiResponse = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [{ role: "user", content: skinAnalysisPrompt }],
-        temperature: 0.4,
-        max_tokens: 4000,
-      });
+   // Process the OpenAI API call
+   const openaiResponse = await openai.chat.completions.create({
+    model: "gpt-4-turbo",
+    messages: [{ role: "user", content: skinAnalysisPrompt }],
+    temperature: 0.4,
+    max_tokens: 4000,
+  });
 
-      const responseContent = openaiResponse.choices[0].message.content;
-      let scores;
+  const responseContent = openaiResponse.choices[0].message.content;
 
-      try {
-        scores = JSON.parse(responseContent);
-      } catch (parseError) {
-        return res.status(500).json({
-          message: "Error parsing OpenAI response",
-          details: parseError.message,
-        });
-      }
-
-      return res.json({ imageDescriptions, skinAnalysis: scores });
-    } catch (openaiError) {
-      console.error("OpenAI error:", openaiError);
-      return res.status(500).json({
-        message: "Error with OpenAI API",
-        details: openaiError.message,
-      });
-    }
-
-  } catch (error) {
-    console.error("Error processing images:", error);
+  // Parse and validate the JSON response from OpenAI
+  let scores;
+  try {
+    scores = JSON.parse(responseContent);
+  } catch (parseError) {
     return res.status(500).json({
-      message: "Error processing image files.",
-      details: error.message,
+      message: "Error parsing OpenAI response",
+      details: parseError.message,
     });
   }
-});
 
+  // Send back the image URLs and analysis scores
+  return res.json({ imageDescriptions, skinAnalysis: scores });
+} catch (error) {
+  console.error("Error processing images:", error);
+  return res.status(500).json({
+    message: "Error processing image files.",
+    details: error.message,
+  });
+}
+});
 // Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
