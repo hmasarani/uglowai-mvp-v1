@@ -91,18 +91,17 @@ const TryFreePage = () => {
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors',
-        credentials: 'omit'
+        mode: 'cors'
       });
   
-      console.log(`Response status: ${response.status}`);
-  
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Server Error: ${response.statusText}\n${errorData}`);
+        const errorText = await response.text();
+        console.error('Server error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`Server Error (${response.status}): ${errorText}`);
       }
   
       const result = await response.json();
