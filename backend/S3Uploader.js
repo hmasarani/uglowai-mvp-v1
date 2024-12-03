@@ -23,7 +23,7 @@ const uploadFileToS3 = async (fileBuffer, fileName) => {
     Body: fileBuffer,
     ContentType: 'image/jpeg',
   };
-
+//UPLOAD S3
   try {
     console.log('S3 Upload Attempt:', {
       Bucket: params.Bucket,
