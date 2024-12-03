@@ -67,7 +67,7 @@ app.get("/test-cors", (req, res) => {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB file size limit
+    fileSize: 15 * 1024 * 1024, // 15MB file size limit
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
@@ -122,10 +122,6 @@ const convertHeicToJpeg = async (buffer) => {
 
 // Route handler for analyzing images
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'POST');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
-  
   try {
     console.log("Uploaded Files:", req.files.map(file => ({
       originalname: file.originalname,

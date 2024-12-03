@@ -37,9 +37,9 @@ const TryFreePage = () => {
         console.log(`Error: Unsupported file type: ${file.type}`);
         return;
       }
-      if (file.size > 5 * 1024 * 1024) {  // Limiting file size to 5MB
-        setError("File size should be less than 5MB.");
-        console.log("Error: File size exceeds limit (5MB).");
+      if (file.size > 15 * 1024 * 1024) {  // Increased to 15MB
+        setError("File size should be less than 15MB.");
+        console.log("Error: File size exceeds limit (15MB).");
         return;
       }
       newImages[index] = file;
