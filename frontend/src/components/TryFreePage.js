@@ -73,64 +73,94 @@ const TryFreePage = () => {
   
     if (filledImages.length !== 3) {
       setError(`Please upload exactly 3 pictures. You have ${filledImages.length} image(s) uploaded.`);
-      console.log(`Error: Not exactly 3 images uploaded. Current: ${filledImages.length}`);
       return;
     }
   
     const formData = new FormData();
     filledImages.forEach((image, index) => {
-      formData.append("files", image, `image${index + 1}.jpg`);
-      console.log(`Image ${index + 1} added to FormData:`, {
+      console.log(`Processing image ${index + 1}:`, {
         name: image.name,
         type: image.type,
-        size: image.size
+        size: image.size,
+        lastModified: image.lastModified
       });
+
+      formData.append("files", image, `image${index + 1}.jpg`);
     });
   
     setIsSubmitting(true);
     setError("");
   
     try {
-      console.log("Submitting images to the server...");
+      console.log("Starting image upload...");
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-  
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increase timeout to 60 seconds
+
+      for (let pair of formData.entries()) {
+        console.log('FormData entry:', {
+          key: pair[0],
+          fileName: pair[1].name,
+          fileType: pair[1].type,
+          fileSize: pair[1].size
+        });
+      }
+
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-        }
+          'Origin': window.location.origin
+        },
+        credentials: 'omit' // Try without credentials
       });
-  
+
       clearTimeout(timeoutId);
-  
-      console.log(`Response status: ${response.status}`);
-  
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers));
+
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Server Error: ${response.statusText}\n${errorData}`);
+        const errorText = await response.text();
+        console.error('Server error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`Server Error (${response.status}): ${errorText}`);
       }
-  
-      const result = await response.json();
-      console.log("Server Response:", result);
-  
+
+      let result;
+      try {
+        const text = await response.text();
+        console.log('Raw response:', text);
+        result = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Invalid JSON response from server');
+      }
+
+      console.log("Parsed response:", result);
+
       if (result && result.skinAnalysis) {
         localStorage.setItem("analysisResults", JSON.stringify(result.skinAnalysis));
         navigate("/your-results");
       } else {
-        throw new Error("Invalid response format from server");
+        throw new Error("Missing skin analysis in response");
       }
     } catch (error) {
-      console.error("Detailed submission error:", {
-        message: error.message,
+      console.error("Upload error details:", {
         name: error.name,
-        stack: error.stack
+        message: error.message,
+        stack: error.stack,
+        type: error.constructor.name
       });
-  
+
       if (error.name === 'AbortError') {
         setError("Request timed out. Please try again with a better connection.");
+      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        setError("Network error. Please check your internet connection.");
       } else {
         setError(`Upload failed: ${error.message}. Please try again.`);
       }
@@ -163,6 +193,7 @@ const TryFreePage = () => {
                   id={`file-input-${index}`}
                   type="file"
                   accept="image/*"
+                  capture="environment"
                   onChange={(e) => handleImageChange(index, e)}
                   aria-label={`Choose image ${index + 1}`}
                 />
