@@ -73,81 +73,56 @@ const TryFreePage = () => {
   
     if (filledImages.length !== 3) {
       setError(`Please upload exactly 3 pictures. You have ${filledImages.length} image(s) uploaded.`);
+      console.log(`Error: Not exactly 3 images uploaded. Current: ${filledImages.length}`);
       return;
     }
   
     const formData = new FormData();
     filledImages.forEach((image, index) => {
-      console.log(`Processing image ${index + 1}:`, {
-        name: image.name,
-        type: image.type,
-        size: image.size,
-        lastModified: image.lastModified
-      });
-
       formData.append("files", image, `image${index + 1}.jpg`);
+      console.log(`Image ${index + 1} added to FormData.`);
     });
   
-    setIsSubmitting(true);
-    setError("");
+    setIsSubmitting(true); // Indicate submission is in progress
+    setError(""); // Clear any previous error
   
     try {
-      console.log("Starting image upload...");
+      console.log("Submitting images to the server...");
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increase timeout to 60 seconds
-
-      for (let pair of formData.entries()) {
-        console.log('FormData entry:', {
-          key: pair[0],
-          fileName: pair[1].name,
-          fileType: pair[1].type,
-          fileSize: pair[1].size
-        });
-      }
-
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'Origin': window.location.origin
+          'Origin': 'https://uglowai-mvp-v1-frontend.vercel.app'
         },
-        credentials: 'omit' // Try without credentials
+        credentials: 'omit',
+        mode: 'cors'
       });
-
-      clearTimeout(timeoutId);
-      
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers));
-
+  
+      console.log(`Response status: ${response.status}`);
+  
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Server error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-        throw new Error(`Server Error (${response.status}): ${errorText}`);
+        const errorData = await response.text();
+        throw new Error(`Server Error: ${response.statusText}\n${errorData}`);
       }
-
-      let result;
-      try {
-        const text = await response.text();
-        console.log('Raw response:', text);
-        result = JSON.parse(text);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        throw new Error('Invalid JSON response from server');
-      }
-
-      console.log("Parsed response:", result);
-
+  
+      const result = await response.json();
+      console.log("Server Response:", result);
+  
+      // Check if the response has the expected structure (skinAnalysis)
       if (result && result.skinAnalysis) {
+        console.log("Skin analysis results:", result.skinAnalysis);
+  
+        // Store the results in localStorage
         localStorage.setItem("analysisResults", JSON.stringify(result.skinAnalysis));
+  
+        // Navigate to the results page
         navigate("/your-results");
       } else {
-        throw new Error("Missing skin analysis in response");
+        setError("Server returned no results. Please try again.");
+        console.log("Error: Server returned no results, or the response structure is incorrect.");
       }
     } catch (error) {
       console.error("Upload error details:", {
@@ -165,7 +140,8 @@ const TryFreePage = () => {
         setError(`Upload failed: ${error.message}. Please try again.`);
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Reset submission state
+      console.log("Image submission finished.");
     }
   };  
   
