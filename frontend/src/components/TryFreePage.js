@@ -15,9 +15,26 @@ const TryFreePage = () => {
     console.log(`Image selected for index ${index}:`, file);
 
     if (file) {
-      if (!file.type.startsWith("image/")) {
-        setError("Only image files are allowed.");
-        console.log("Error: Only image files are allowed.");
+      console.log('File details:', {
+        type: file.type,
+        size: file.size,
+        name: file.name,
+        lastModified: file.lastModified
+      });
+
+      const validTypes = [
+        'image/jpeg', 
+        'image/jpg',
+        'image/png', 
+        'image/heic', 
+        'image/heif',
+        'image/x-citrus',
+        'image'
+      ];
+      
+      if (!validTypes.some(type => file.type.toLowerCase().startsWith(type))) {
+        setError(`Unsupported file type: ${file.type}. Please use JPEG, PNG, or HEIC images.`);
+        console.log(`Error: Unsupported file type: ${file.type}`);
         return;
       }
       if (file.size > 5 * 1024 * 1024) {  // Limiting file size to 5MB
@@ -63,18 +80,31 @@ const TryFreePage = () => {
     const formData = new FormData();
     filledImages.forEach((image, index) => {
       formData.append("files", image, `image${index + 1}.jpg`);
-      console.log(`Image ${index + 1} added to FormData.`);
+      console.log(`Image ${index + 1} added to FormData:`, {
+        name: image.name,
+        type: image.type,
+        size: image.size
+      });
     });
   
-    setIsSubmitting(true); // Indicate submission is in progress
-    setError(""); // Clear any previous error
+    setIsSubmitting(true);
+    setError("");
   
     try {
       console.log("Submitting images to the server...");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+  
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+        }
       });
+  
+      clearTimeout(timeoutId);
   
       console.log(`Response status: ${response.status}`);
   
@@ -86,26 +116,26 @@ const TryFreePage = () => {
       const result = await response.json();
       console.log("Server Response:", result);
   
-      // Check if the response has the expected structure (skinAnalysis)
       if (result && result.skinAnalysis) {
-        console.log("Skin analysis results:", result.skinAnalysis);
-  
-        // Store the results in localStorage
         localStorage.setItem("analysisResults", JSON.stringify(result.skinAnalysis));
-  
-        // Navigate to the results page
         navigate("/your-results");
-        console.log("Navigation to results page.");
       } else {
-        setError("Server returned no results. Please try again.");
-        console.log("Error: Server returned no results, or the response structure is incorrect.");
+        throw new Error("Invalid response format from server");
       }
     } catch (error) {
-      console.error("Error analyzing images:", error);
-      setError("Failed to analyze images. Please ensure all images are valid and try again.");
+      console.error("Detailed submission error:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+  
+      if (error.name === 'AbortError') {
+        setError("Request timed out. Please try again with a better connection.");
+      } else {
+        setError(`Upload failed: ${error.message}. Please try again.`);
+      }
     } finally {
-      setIsSubmitting(false); // Reset submission state
-      console.log("Image submission finished.");
+      setIsSubmitting(false);
     }
   };  
   
@@ -133,7 +163,6 @@ const TryFreePage = () => {
                   id={`file-input-${index}`}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={(e) => handleImageChange(index, e)}
                   aria-label={`Choose image ${index + 1}`}
                 />
