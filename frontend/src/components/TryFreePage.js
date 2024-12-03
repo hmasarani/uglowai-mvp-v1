@@ -88,17 +88,14 @@ const TryFreePage = () => {
   
     try {
       console.log("Submitting images to the server...");
-      const controller = new AbortController();
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
-        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
-          'Origin': 'https://uglowai-mvp-v1-frontend.vercel.app'
         },
-        credentials: 'omit',
-        mode: 'cors'
+        mode: 'cors',
+        credentials: 'omit'
       });
   
       console.log(`Response status: ${response.status}`);

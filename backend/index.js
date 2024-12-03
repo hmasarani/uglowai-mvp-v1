@@ -45,11 +45,10 @@ try {
 // Middleware
 app.use(
   cors({
-    origin: ["https://uglowai-mvp-v1-frontend.vercel.app", "http://localhost:3000"],
-    methods: ["POST", "GET", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Accept", "Origin"],
-    credentials: false,
-    maxAge: 86400 // 24 hours
+    origin: 'https://uglowai-mvp-v1-frontend.vercel.app',
+    methods: ['POST', 'GET', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Accept', 'Origin'],
+    credentials: false
   })
 );
 app.use(bodyParser.json());
@@ -120,19 +119,12 @@ const convertHeicToJpeg = async (buffer) => {
   }
 };
 
-// Add a specific CORS handler for the analyze-images endpoint
-app.options("/analyze-images", (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(200);
-});
 
 // Route handler for analyzing images
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
-  // Add CORS headers explicitly
   res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'POST');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
   
   try {
     console.log("Uploaded Files:", req.files.map(file => ({
