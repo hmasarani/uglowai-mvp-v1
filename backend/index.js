@@ -43,17 +43,12 @@ try {
 }
 
 // Middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
+app.use(cors({
+  origin: 'https://uglowai-mvp-v1-frontend.vercel.app',  // Specific origin instead of array
+  methods: ['POST', 'GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Origin'],
+  credentials: false
+}));
 app.use(bodyParser.json());
 
 // Root route for basic status
@@ -125,8 +120,13 @@ const convertHeicToJpeg = async (buffer) => {
 
 // Route handler for analyzing images
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
+  // Add CORS headers explicitly for this route
+  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'POST');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
+  
   try {
-    console.log("Uploaded Files:", req.files?.map(file => ({
+    console.log("Uploaded Files:", req.files.map(file => ({
       originalname: file.originalname,
       mimetype: file.mimetype,
       size: file.size,

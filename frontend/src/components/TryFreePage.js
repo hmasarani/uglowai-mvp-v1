@@ -83,15 +83,19 @@ const TryFreePage = () => {
       console.log(`Image ${index + 1} added to FormData.`);
     });
   
-    setIsSubmitting(true); // Indicate submission is in progress
-    setError(""); // Clear any previous error
+    setIsSubmitting(true);
+    setError("");
   
     try {
       console.log("Submitting images to the server...");
       const response = await fetch("https://uglowai-mvp-v1.vercel.app/analyze-images", {
         method: "POST",
         body: formData,
-        mode: 'cors'
+        headers: {
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
+        credentials: 'omit'
       });
   
       if (!response.ok) {
