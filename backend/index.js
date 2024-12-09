@@ -139,50 +139,63 @@ async function convertImage(buffer) {
 
 // Route handler for analyzing images
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
+  console.log("Received request to /analyze-images");
+  console.log("Request headers:", req.headers);
+  console.log("Files received:", req.files ? req.files.length : 0);
+
   // Add CORS headers explicitly for this route
   res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
   res.header('Access-Control-Allow-Methods', 'POST');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
   
   try {
+    if (!req.files || req.files.length !== 3) {
+      console.log("Invalid number of files:", req.files ? req.files.length : 0);
+      return res.status(400).json({
+        message: "Please upload exactly 3 pictures to proceed.",
+      });
+    }
+
     console.log("Uploaded Files:", req.files.map(file => ({
       originalname: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
     })));
 
-    // Validate that exactly 3 images were uploaded
-    if (!req.files || req.files.length !== 3) {
-      return res.status(400).json({
-        message: "Please upload exactly 3 pictures to proceed.",
-      });
-    }
-
     // Convert all files to JPEG (if needed) and upload them to S3
     const uploadedFiles = await Promise.all(
       req.files.map(async (file, index) => {
-        const convertedBuffer = await convertImage(file.buffer);
-        const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
+        console.log(`Processing file ${index + 1}: ${file.originalname}`);
+        try {
+          const convertedBuffer = await convertImage(file.buffer);
+          const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
 
-        console.log(`Uploading file ${index + 1} as JPEG:`, fileName);
+          console.log(`Uploading file ${index + 1} as JPEG:`, fileName);
 
-        // Upload converted image to S3
-        const params = {
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: fileName,
-          Body: convertedBuffer,
-          ContentType: 'image/jpeg',
-        };
+          // Upload converted image to S3
+          const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileName,
+            Body: convertedBuffer,
+            ContentType: 'image/jpeg',
+          };
 
-        const command = new PutObjectCommand(params);
-        await s3Client.send(command);
+          const command = new PutObjectCommand(params);
+          const result = await s3Client.send(command);
+          console.log(`S3 upload result for file ${index + 1}:`, result);
 
-        return {
-          id: index + 1,
-          url: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`,
-        };
+          return {
+            id: index + 1,
+            url: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`,
+          };
+        } catch (error) {
+          console.error(`Error processing file ${index + 1}:`, error);
+          throw error;
+        }
       })
     );
+
+    console.log("All files processed and uploaded successfully");
 
     // Define the OpenAI prompt for skin analysis
     const skinAnalysisPrompt = `
@@ -292,10 +305,12 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
   } catch (error) {
     // Log the error details
     console.error("Error processing images or calling OpenAI:", error);
+    console.error("Error stack:", error.stack);
 
     return res.status(500).json({
       message: "Error processing image files.",
       details: error.message,
+      stack: error.stack,
     });
   }
 });
