@@ -64,22 +64,8 @@ const corsOptions = {
 // Apply CORS middleware with options
 app.use(cors(corsOptions));
 
-// Add preflight handler for the specific route
-app.options('/analyze-images', cors(corsOptions));
-
-// Add headers middleware to ensure CORS headers are always present
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  next();
-});
+// Add preflight handler for all routes
+app.options('*', cors(corsOptions));
 
 app.use(bodyParser.json());
 
@@ -340,4 +326,3 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-

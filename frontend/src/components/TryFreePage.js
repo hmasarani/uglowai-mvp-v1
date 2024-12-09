@@ -93,7 +93,6 @@ const TryFreePage = () => {
         body: formData,
         headers: {
           'Accept': 'application/json',
-          'Origin': 'https://uglowai-mvp-v1-frontend.vercel.app'
         },
         mode: 'cors',
         credentials: 'include'
