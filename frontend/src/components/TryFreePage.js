@@ -37,7 +37,7 @@ const TryFreePage = () => {
         console.log(`Error: Unsupported file type: ${file.type}`);
         return;
       }
-      if (file.size > 15 * 1024 * 1024) {  // Increased to 15MB
+      if (file.size > 15 * 1024 * 1024) {  // 15MB limit
         setError("File size should be less than 15MB.");
         console.log("Error: File size exceeds limit (15MB).");
         return;
@@ -93,9 +93,10 @@ const TryFreePage = () => {
         body: formData,
         headers: {
           'Accept': 'application/json',
+          'Origin': 'https://uglowai-mvp-v1-frontend.vercel.app'
         },
         mode: 'cors',
-        credentials: 'omit'
+        credentials: 'include'
       });
   
       if (!response.ok) {
@@ -199,3 +200,4 @@ const TryFreePage = () => {
 };
 
 export default TryFreePage;
+

@@ -51,13 +51,36 @@ const s3Client = new S3Client({
   },
 });
 
-// Middleware
-app.use(cors({
-  origin: 'https://uglowai-mvp-v1-frontend.vercel.app',
+// Updated CORS configuration
+const corsOptions = {
+  origin: ['https://uglowai-mvp-v1-frontend.vercel.app', 'http://localhost:3000'],
   methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Origin'],
-  credentials: false
-}));
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS middleware with options
+app.use(cors(corsOptions));
+
+// Add preflight handler for the specific route
+app.options('/analyze-images', cors(corsOptions));
+
+// Add headers middleware to ensure CORS headers are always present
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
 app.use(bodyParser.json());
 
 // Root route for basic status
@@ -97,12 +120,13 @@ const upload = multer({
 
 async function convertHeicToJpeg(buffer) {
   try {
+    console.log('Starting HEIC conversion...');
     const jpegBuffer = await heicConvert({
       buffer: buffer,
       format: 'JPEG',
       quality: 0.9
     });
-    console.log('HEIC conversion successful using heic-convert');
+    console.log('HEIC conversion successful. JPEG size:', jpegBuffer.length);
     return jpegBuffer;
   } catch (error) {
     console.error('HEIC conversion failed:', error);
@@ -118,13 +142,15 @@ async function convertImage(buffer) {
     if (fileType && (fileType.ext === 'heic' || fileType.ext === 'heif')) {
       console.log('Converting HEIC/HEIF to JPEG...');
       try {
+        console.log('Attempting conversion with Sharp...');
         const jpegBuffer = await sharp(buffer)
           .toFormat('jpeg')
           .toBuffer();
         console.log('Conversion successful using Sharp. JPEG size:', jpegBuffer.length);
         return jpegBuffer;
       } catch (sharpError) {
-        console.error('Sharp conversion failed, trying heic-convert:', sharpError);
+        console.error('Sharp conversion failed:', sharpError);
+        console.log('Attempting conversion with heic-convert...');
         return await convertHeicToJpeg(buffer);
       }
     }
@@ -132,7 +158,7 @@ async function convertImage(buffer) {
     console.log('No conversion needed. Original buffer size:', buffer.length);
     return buffer;
   } catch (error) {
-    console.error('Error during conversion:', error);
+    console.error('Error during image conversion:', error);
     throw error;
   }
 }
@@ -142,11 +168,6 @@ app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
   console.log("Received request to /analyze-images");
   console.log("Request headers:", req.headers);
   console.log("Files received:", req.files ? req.files.length : 0);
-
-  // Add CORS headers explicitly for this route
-  res.header('Access-Control-Allow-Origin', 'https://uglowai-mvp-v1-frontend.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'POST');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Accept, Origin');
   
   try {
     if (!req.files || req.files.length !== 3) {
