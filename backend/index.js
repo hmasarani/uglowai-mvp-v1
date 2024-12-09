@@ -1,13 +1,13 @@
-import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
-import multer from "multer";
-import dotenv from "dotenv";
-import OpenAI from "openai";
-import uploadFileToS3 from "./S3Uploader.js";
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import multer from 'multer';
+import dotenv from 'dotenv';
+import OpenAI from 'openai';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
-import convert from 'heic-convert';
 import { fileTypeFromBuffer } from 'file-type';
+import heicConvert from 'heic-convert';
 
 // Load environment variables
 dotenv.config();
@@ -42,9 +42,18 @@ try {
   process.exit(1);
 }
 
+// Initialize S3 client
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
 // Middleware
 app.use(cors({
-  origin: 'https://uglowai-mvp-v1-frontend.vercel.app',  // Specific origin instead of array
+  origin: 'https://uglowai-mvp-v1-frontend.vercel.app',
   methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Accept', 'Origin'],
   credentials: false
@@ -86,37 +95,47 @@ const upload = multer({
   },
 });
 
-const convertHeicToJpeg = async (buffer) => {
+async function convertHeicToJpeg(buffer) {
   try {
-    const fileTypeResult = await fileTypeFromBuffer(buffer);
+    const jpegBuffer = await heicConvert({
+      buffer: buffer,
+      format: 'JPEG',
+      quality: 0.9
+    });
+    console.log('HEIC conversion successful using heic-convert');
+    return jpegBuffer;
+  } catch (error) {
+    console.error('HEIC conversion failed:', error);
+    throw error;
+  }
+}
 
-    if (fileTypeResult && fileTypeResult.ext === "heic") {
-      const jpegBuffer = await convert({
-        buffer,         // the HEIC file buffer
-        format: "JPEG", // convert to JPEG
-        quality: 0.7,   // adjust quality as needed
-      });
+async function convertImage(buffer) {
+  try {
+    const fileType = await fileTypeFromBuffer(buffer);
+    console.log('Detected file type:', fileType);
 
-      return jpegBuffer;
+    if (fileType && (fileType.ext === 'heic' || fileType.ext === 'heif')) {
+      console.log('Converting HEIC/HEIF to JPEG...');
+      try {
+        const jpegBuffer = await sharp(buffer)
+          .toFormat('jpeg')
+          .toBuffer();
+        console.log('Conversion successful using Sharp. JPEG size:', jpegBuffer.length);
+        return jpegBuffer;
+      } catch (sharpError) {
+        console.error('Sharp conversion failed, trying heic-convert:', sharpError);
+        return await convertHeicToJpeg(buffer);
+      }
     }
 
-    // Return the original buffer if it's not a HEIC file
+    console.log('No conversion needed. Original buffer size:', buffer.length);
     return buffer;
   } catch (error) {
-    console.error("HEIC conversion error:", error);
-
-    // Attempt fallback conversion using sharp
-    try {
-      return await sharp(buffer)
-        .toFormat("jpeg")
-        .toBuffer();
-    } catch (sharpError) {
-      console.error("Sharp conversion error:", sharpError);
-      throw new Error("Failed to convert image");
-    }
+    console.error('Error during conversion:', error);
+    throw error;
   }
-};
-
+}
 
 // Route handler for analyzing images
 app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
@@ -142,21 +161,28 @@ app.post("/analyze-images", upload.array("files", 3), async (req, res) => {
     // Convert all files to JPEG (if needed) and upload them to S3
     const uploadedFiles = await Promise.all(
       req.files.map(async (file, index) => {
-        const convertedBuffer = await convertHeicToJpeg(file.buffer);
+        const convertedBuffer = await convertImage(file.buffer);
         const fileName = `images/face-${Date.now()}-${index + 1}.jpg`;
 
         console.log(`Uploading file ${index + 1} as JPEG:`, fileName);
 
         // Upload converted image to S3
-        return uploadFileToS3(convertedBuffer, fileName);
+        const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileName,
+          Body: convertedBuffer,
+          ContentType: 'image/jpeg',
+        };
+
+        const command = new PutObjectCommand(params);
+        await s3Client.send(command);
+
+        return {
+          id: index + 1,
+          url: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`,
+        };
       })
     );
-
-    // Prepare metadata for OpenAI processing
-    const imageDescriptions = uploadedFiles.map((file, index) => ({
-      id: index + 1,
-      url: file.Location,
-    }));
 
     // Define the OpenAI prompt for skin analysis
     const skinAnalysisPrompt = `
@@ -174,7 +200,7 @@ Scoring Guide:
 Example Explanation: "Mild redness concentrated around the nose and cheeks, scoring 70."
 
 Hydration:
-Assess the skin’s moisture level, where well-hydrated skin corresponds to a higher score.
+Assess the skin's moisture level, where well-hydrated skin corresponds to a higher score.
 Scoring Guide:
 81-100: Fully hydrated; skin is plump, smooth, and radiant.
 61-80: Adequately hydrated; minor dryness in isolated areas.
@@ -182,6 +208,7 @@ Scoring Guide:
 21-40: Moderately dry; noticeable dryness and flakiness.
 0-20: Severely dry; skin appears cracked or visibly dehydrated.
 Example Explanation: "Skin shows slight dryness on the forehead and cheeks, indicating a hydration score of 60."
+
 Pores:
 Evaluate the visibility and size of pores, where smaller and less visible pores correspond to a higher score.
 Scoring Guide:
@@ -221,8 +248,7 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 "Acne": {"score": 0, "explanation": "Explanation of acne score."},
 "Overall Skin Quality": {"score": 0, "explanation": "Explanation of overall skin quality."}
 }
-`; // Your skin analysis prompt here
-
+`;
 
     // Process the OpenAI API call
     console.log("Skin Analysis Prompt Sent to OpenAI:", skinAnalysisPrompt);
@@ -256,12 +282,12 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
 
     // Log the final response before sending it back to the client
     console.log("Final Response Sent to Client:", {
-      imageDescriptions,
+      imageDescriptions: uploadedFiles,
       skinAnalysis: scores,
     });
 
     // Send back the image URLs and analysis scores
-    return res.json({ imageDescriptions, skinAnalysis: scores });
+    return res.json({ imageDescriptions: uploadedFiles, skinAnalysis: scores });
 
   } catch (error) {
     // Log the error details
@@ -274,7 +300,8 @@ Example Explanation: "Overall skin quality is good, with slight redness and mild
   }
 });
 
-// Start server (moved outside the try-catch)
+// Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
